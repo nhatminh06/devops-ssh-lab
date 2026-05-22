@@ -20,7 +20,7 @@ This lab is focused on secure remote Linux administration over a private network
 ## Components
 
 - **Laptop (client):** where SSH commands are run.
-- **Linux server:** target machine running `openssh-server`.
+- **Linux server:** target machine running OpenSSH (`sshd`).
 - **Tailscale (`tailscaled`):** provides private overlay networking between client and server.
 - **OpenSSH (`sshd`):** secure remote shell service.
 

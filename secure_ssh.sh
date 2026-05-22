@@ -35,10 +35,10 @@ fi
 echo "[INFO] Validating SSH configuration syntax..."
 sudo sshd -t
 
-echo "[INFO] Restarting SSH service..."
-sudo systemctl restart ssh
+echo "[INFO] Restarting sshd service..."
+sudo systemctl restart sshd
 
-echo "[INFO] SSH service status:"
-sudo systemctl status ssh --no-pager
+echo "[INFO] sshd service status:"
+sudo systemctl status sshd --no-pager
 
 echo "[DONE] SSH hardening applied successfully."

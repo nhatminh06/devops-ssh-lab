@@ -2,16 +2,13 @@
 set -euo pipefail
 
 # install_tailscale.sh
-# Installs Tailscale on Ubuntu/Debian and enables the tailscaled service.
+# Installs Tailscale on CachyOS/Arch and enables the tailscaled service.
 
-echo "[INFO] Updating package index..."
-sudo apt update
+echo "[INFO] Updating system packages..."
+sudo pacman -Syu --noconfirm
 
-echo "[INFO] Installing curl..."
-sudo apt install -y curl
-
-echo "[INFO] Installing Tailscale via official install script..."
-curl -fsSL https://tailscale.com/install.sh | sh
+echo "[INFO] Installing Tailscale..."
+sudo pacman -S --noconfirm tailscale
 
 echo "[INFO] Enabling tailscaled service at boot..."
 sudo systemctl enable tailscaled

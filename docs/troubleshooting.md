@@ -64,24 +64,24 @@ This guide captures real issues encountered during setup and how to debug them s
 
 - One endpoint (often client laptop) is not connected to Tailscale.
 
-## 4) Tailscale Install Problems (apt repo issues)
+## 4) Tailscale Install Problems (package mirror issues)
 
 ### Symptom
 
-- `apt update` fails and blocks package install.
+- `pacman -Syu` fails and blocks package install.
 
 ### Checks
 
-- Review apt source files for invalid repos:
+- Check package mirror configuration and refresh package databases:
 
   ```bash
-  ls /etc/apt/sources.list.d
-  sudo apt update
+  cat /etc/pacman.d/mirrorlist
+  sudo pacman -Syy
   ```
 
 ### Fix pattern
 
-- Remove or correct broken third-party repo entries, then rerun `apt update`.
+- Correct mirror configuration or temporarily switch mirrors, then rerun `pacman -Syu`.
 
 ## 5) Potential VPN/DNS Interference (Cloudflare WARP)
 
@@ -128,7 +128,7 @@ This guide captures real issues encountered during setup and how to debug them s
 
 ## Debugging Workflow I Followed
 
-1. Validate service health (`systemctl status ssh`, `systemctl status tailscaled`).
+1. Validate service health (`systemctl status sshd`, `systemctl status tailscaled`).
 2. Validate addressing (local vs Tailscale IP).
 3. Validate client/server membership in same Tailscale network.
 4. Validate auth path (key works first, then harden).

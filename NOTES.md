@@ -65,10 +65,10 @@ When entering a password in terminal, no characters or asterisks appear. That be
 
 ## What I Debugged During Setup
 
-### 1) Tailscale install failed because apt sources were broken
+### 1) Tailscale install failed because package mirrors were broken
 
-- `apt update` errors can block unrelated package installs.
-- Fixing invalid/outdated repo entries was required before Tailscale setup could complete.
+- `pacman -Syu` errors can block unrelated package installs.
+- Fixing invalid/outdated mirror configuration was required before Tailscale setup could complete.
 
 ### 2) Possible Cloudflare WARP interference
 

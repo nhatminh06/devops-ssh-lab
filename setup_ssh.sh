@@ -2,21 +2,21 @@
 set -euo pipefail
 
 # setup_ssh.sh
-# Installs and starts OpenSSH server on Ubuntu/Debian.
+# Installs and starts OpenSSH server on CachyOS/Arch.
 
-echo "[INFO] Updating package index..."
-sudo apt update
+echo "[INFO] Updating system packages..."
+sudo pacman -Syu --noconfirm
 
 echo "[INFO] Installing OpenSSH server..."
-sudo apt install -y openssh-server
+sudo pacman -S --noconfirm openssh
 
-echo "[INFO] Enabling SSH service at boot..."
-sudo systemctl enable ssh
+echo "[INFO] Enabling sshd service at boot..."
+sudo systemctl enable sshd
 
-echo "[INFO] Starting SSH service..."
-sudo systemctl start ssh
+echo "[INFO] Starting sshd service..."
+sudo systemctl start sshd
 
-echo "[INFO] SSH service status:"
-sudo systemctl status ssh --no-pager
+echo "[INFO] sshd service status:"
+sudo systemctl status sshd --no-pager
 
 echo "[DONE] OpenSSH is installed and running."

@@ -2,6 +2,8 @@
 
 A beginner-friendly Linux and networking lab focused on secure SSH administration over a private Tailscale network.
 
+> Update: I switched this lab environment from Ubuntu to CachyOS (Arch-based), and the scripts now use Arch tooling (`pacman`, `sshd`).
+
 ## Overview
 
 This project documents a hands-on setup process for remote administration of a Linux server from a laptop. The focus is on practical DevOps fundamentals: installing and configuring OpenSSH, securing access with SSH keys, using Tailscale for private connectivity, and debugging real setup issues.
@@ -45,9 +47,9 @@ Detailed notes: `docs/architecture.md`
 
 ## Features
 
-- Scripted OpenSSH installation for Ubuntu/Debian (`setup_ssh.sh`)
+- Scripted OpenSSH installation for CachyOS/Arch (`setup_ssh.sh`)
 - Scripted SSH hardening with backup-first workflow (`secure_ssh.sh`)
-- Scripted Tailscale installation with manual login step (`install_tailscale.sh`)
+- Scripted Tailscale installation with manual login step on CachyOS/Arch (`install_tailscale.sh`)
 - Troubleshooting guide based on real setup issues (`docs/troubleshooting.md`)
 - Practical operator notes (`NOTES.md`)
 
@@ -64,14 +66,14 @@ This demonstrates the full path is working in practice: laptop client -> Tailsca
 
 ## Setup Summary
 
-1. Install and start OpenSSH on the Linux server:
+1. Install and start OpenSSH on the CachyOS/Arch server:
 
    ```bash
    chmod +x setup_ssh.sh
    ./setup_ssh.sh
    ```
 
-2. Install Tailscale on the Linux server:
+2. Install Tailscale on the CachyOS/Arch server:
 
    ```bash
    chmod +x install_tailscale.sh
@@ -95,12 +97,24 @@ This demonstrates the full path is working in practice: laptop client -> Tailsca
 
    ```bash
    chmod +x secure_ssh.sh
-   ./secure_ssh.sh
-   ```
+    ./secure_ssh.sh
+    ```
+
+## Distro Note
+
+The security and networking workflow is the same across Linux distros, but package manager and service names can differ.
+
+| Task | Ubuntu/Debian | CachyOS/Arch |
+|---|---|---|
+| Install OpenSSH | `sudo apt install -y openssh-server` | `sudo pacman -S --noconfirm openssh` |
+| SSH service name | `ssh` | `sshd` |
+| Check SSH service | `sudo systemctl status ssh --no-pager` | `sudo systemctl status sshd --no-pager` |
+| Install Tailscale | `curl -fsSL https://tailscale.com/install.sh \| sh` | `sudo pacman -S --noconfirm tailscale` |
+| Refresh packages | `sudo apt update` | `sudo pacman -Syu` |
 
 ## Tech Used
 
-- Linux (Ubuntu/Debian)
+- Linux (CachyOS/Arch)
 - OpenSSH server/client
 - Tailscale (WireGuard-based private networking)
 - Bash scripting
@@ -125,7 +139,7 @@ This project came from a real debugging workflow, not a one-pass setup. Key issu
 
 - confusion between username and hostname in SSH commands
 - confusion between local IP, public IP, and Tailscale IP selection
-- broken `apt` repositories that blocked Tailscale installation
+- broken package mirrors that blocked Tailscale installation
 - possible Cloudflare WARP interference affecting routing and DNS behavior
 - SSH hanging because the client laptop also needed Tailscale active
 - accidentally SSH-ing into the same machine instead of testing laptop -> server access
@@ -136,7 +150,7 @@ See: `docs/troubleshooting.md` and `NOTES.md`
 
 ## Skills Demonstrated
 
-- Linux package/service management (`apt`, `systemctl`)
+- Linux package/service management (`pacman`, `systemctl`)
 - SSH installation, validation, and hardening
 - Private remote access design with Tailscale
 - Network troubleshooting and connectivity validation
@@ -144,7 +158,7 @@ See: `docs/troubleshooting.md` and `NOTES.md`
 
 ## Future Improvements
 
-- Add Ubuntu and Debian test matrix notes
+- Add CachyOS and Arch test matrix notes
 - Add UFW examples for local LAN hardening
 - Add optional fail2ban profile for SSH
 - Add shellcheck and CI validation for scripts
