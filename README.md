@@ -1,169 +1,102 @@
 # devops-ssh-lab
 
-A beginner-friendly Linux and networking lab focused on secure SSH administration over a private Tailscale network.
-
-> Update: I switched this lab environment from Ubuntu to CachyOS (Arch-based), and the scripts now use Arch tooling (`pacman`, `sshd`).
-
-## Overview
-
-This project documents a hands-on setup process for remote administration of a Linux server from a laptop. The focus is on practical DevOps fundamentals: installing and configuring OpenSSH, securing access with SSH keys, using Tailscale for private connectivity, and debugging real setup issues.
-
-This is **not** a deployment project. It does not include Kubernetes, cloud hosting, or application rollout workflows. The scope is infrastructure access, security basics, and troubleshooting.
-
-## Context / Motivation
-
-This project grew out of my coursework at the University of Minnesota, Twin Cities, especially CSCI 2021 and CSCI 2041, where working in Linux environments and accessing remote lab systems is part of normal workflow. I built this repo to turn that experience into a documented, repeatable home-lab setup focused on practical remote administration.
-
-## Why This Project Matters
-
-Remote Linux access is a core DevOps skill. In many real environments, the first task is not deploying an app, but safely reaching and maintaining infrastructure.
-
-This lab demonstrates how to:
-
-- establish reliable SSH access
-- reduce attack surface with secure SSH settings
-- avoid exposing port 22 publicly by using Tailscale
-- investigate and fix common connectivity and configuration issues
-- document operational decisions clearly
+A small, safety-focused lab for administering a CachyOS/Arch Linux server with traditional OpenSSH over a private Tailscale network. It does not expose SSH publicly or replace OpenSSH with Tailscale SSH.
 
 ## Architecture
 
 ```text
-Laptop (SSH client)
-    |
-    v
-Tailscale private network
-    |
-    v
-Linux server (SSH server)
-    |
-    v
-OpenSSH secure remote administration
+macOS laptop                 private tailnet                 CachyOS/Arch server
+SSH + VS Code client  ──── Tailscale 100.x address ────>  tailscaled + sshd
 ```
 
-![devops-ssh-lab architecture diagram](./devops-homelab.svg)
+The laptop initiates connections. `tailscaled` supplies the private route; the normal `sshd` daemon authenticates the Linux account and provides shells, SFTP, and forwarding used by VS Code Remote SSH. See [architecture](docs/architecture.md).
 
-Detailed notes: `docs/architecture.md`
+Address types are not interchangeable:
 
-## Features
+- `192.168.x.x`/`10.x.x.x`: LAN address, normally usable only on the same local network.
+- Public IP: internet-routable; this lab does not require forwarding public port 22.
+- `100.x.y.z`: Tailscale address, usable by authorized devices in the same tailnet.
 
-- Scripted OpenSSH installation for CachyOS/Arch (`setup_ssh.sh`)
-- Scripted SSH hardening with backup-first workflow (`secure_ssh.sh`)
-- Scripted Tailscale installation with manual login step on CachyOS/Arch (`install_tailscale.sh`)
-- Troubleshooting guide based on real setup issues (`docs/troubleshooting.md`)
-- Practical operator notes (`NOTES.md`)
+## Initial setup
 
-## Demo
-
-Example successful remote login over Tailscale:
+On the CachyOS/Arch server, review before running:
 
 ```bash
-ssh pnmynh@100.x.x.x
-pnmynh@Minh:~$
+./setup_ssh.sh --dry-run
+./install_tailscale.sh --dry-run
+sudo ./setup_ssh.sh
+sudo ./install_tailscale.sh
 ```
 
-This demonstrates the full path is working in practice: laptop client -> Tailscale private network -> Linux SSH server. It also confirms account targeting (`pnmynh`) and network addressing (`100.x.x.x`) are correct.
+The scripts install with `pacman -S --needed`; they do not silently refresh databases or upgrade the system. Because Arch partial upgrades are unsupported, perform a deliberate full upgrade separately when needed (`sudo pacman -Syu`), or opt in with `--upgrade`.
 
-## Setup Summary
+If Tailscale is not authenticated, the installer prints the manual next step:
 
-1. Install and start OpenSSH on the CachyOS/Arch server:
+```bash
+sudo tailscale up
+```
 
-   ```bash
-   chmod +x setup_ssh.sh
-   ./setup_ssh.sh
-   ```
+It never runs `down`, `logout`, `reset`, or forced reauthentication. Re-running it preserves `/var/lib/tailscale`, preferences, and device identity.
 
-2. Install Tailscale on the CachyOS/Arch server:
+On the macOS client, install the current Tailscale app from the App Store or Tailscale download page, sign into the same tailnet, and leave the app connected. Then test:
 
-   ```bash
-   chmod +x install_tailscale.sh
-   ./install_tailscale.sh
-   sudo tailscale up
-   ```
+```bash
+tailscale ping 100.70.249.10
+ssh pnmynh@100.70.249.10
+```
 
-3. Ensure Tailscale is also running on the laptop (client), then get server Tailscale IP:
+## Verification and maintenance
 
-   ```bash
-   tailscale ip -4
-   ```
+Read-only health checks:
 
-4. Test SSH from laptop to server:
+```bash
+./setup_ssh.sh --check
+./install_tailscale.sh --check
+tailscale version
+tailscale status
+tailscale ip -4
+tailscale netcheck
+sudo sshd -t
+systemctl is-active sshd tailscaled
+```
 
-   ```bash
-   ssh youruser@100.x.y.z
-   ```
+Package installation is not proof of end-to-end access. Confirm `tailscale ping`, key authentication, an interactive shell, and a data transfer from the actual remote client.
 
-5. After key-based login is confirmed, apply SSH hardening:
+For reinstall/repair, keep Tailscale state intact and use `sudo pacman -S tailscale openssh`; package reinstalling does not require logging the node out. Never remove state, regenerate SSH host keys, or disable the current authentication method during remote-only maintenance.
 
-   ```bash
-   chmod +x secure_ssh.sh
-    ./secure_ssh.sh
-    ```
+## Safe SSH hardening
 
-## Distro Note
+First install a user public key and verify it in a **new** session while the old session or a local console remains open:
 
-The security and networking workflow is the same across Linux distros, but package manager and service names can differ.
+```bash
+ssh -o PreferredAuthentications=publickey -o PasswordAuthentication=no pnmynh@100.70.249.10
+./secure_ssh.sh --dry-run
+sudo ./secure_ssh.sh --apply --key-login-verified
+```
 
-| Task | Ubuntu/Debian | CachyOS/Arch |
-|---|---|---|
-| Install OpenSSH | `sudo apt install -y openssh-server` | `sudo pacman -S --noconfirm openssh` |
-| SSH service name | `ssh` | `sshd` |
-| Check SSH service | `sudo systemctl status ssh --no-pager` | `sudo systemctl status sshd --no-pager` |
-| Install Tailscale | `curl -fsSL https://tailscale.com/install.sh \| sh` | `sudo pacman -S --noconfirm tailscale` |
-| Refresh packages | `sudo apt update` | `sudo pacman -Syu` |
+The script requires confirmation, backs up configuration, manages `/etc/ssh/sshd_config.d/00-devops-ssh-lab.conf`, checks Include precedence and Match context, validates with `sshd -t` and `sshd -T`, and reloads instead of restarting. It preserves TCP and Unix-socket forwarding for VS Code. If Match rules exist, pass `--context user,client-address,local-address`. It refuses unsafe or ambiguous configurations.
 
-## Tech Used
+## VS Code Remote SSH
 
-- Linux (CachyOS/Arch)
-- OpenSSH server/client
-- Tailscale (WireGuard-based private networking)
-- Bash scripting
-- Basic system administration tools (`systemctl`, `sshd`, `ip`, `hostname`)
+Create a client entry in `~/.ssh/config`:
 
-## Security Practices
+```sshconfig
+Host cachyos-lab
+    HostName 100.70.249.10
+    User pnmynh
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+```
 
-- Prefer private network SSH access (Tailscale) over exposing public SSH
-- Disable root SSH login
-- Disable password authentication after key setup is verified
-- Keep public key authentication enabled
-- Back up `sshd_config` before making security changes
-- Validate SSH service status after configuration updates
+Connect successfully with `ssh cachyos-lab` before choosing **Remote-SSH: Connect to Host**. See [troubleshooting](docs/troubleshooting.md) for shell startup, forwarding, VS Code Server, MTU, DNS, and recovery diagnostics.
 
-### Why Tailscale Instead of Public SSH?
+## Recovery checklist
 
-Exposing SSH on a public IP increases scanning and brute-force risk, especially in beginner lab environments. Tailscale allows remote access through a private, identity-based network, reducing exposure while keeping setup simple.
+1. Keep or obtain local console access; do not close the last working SSH session.
+2. Run `sudo sshd -t`, `systemctl status sshd tailscaled`, and inspect relevant journal entries.
+3. Test the LAN and Tailscale paths separately.
+4. If hardening caused the failure, follow the backup path printed by `secure_ssh.sh`, validate, then reload.
+5. Do not delete keys, Tailscale state, DNS files, or VS Code Server data until diagnostics identify that component.
 
-## Troubleshooting Highlights
-
-This project came from a real debugging workflow, not a one-pass setup. Key issues I had to investigate:
-
-- confusion between username and hostname in SSH commands
-- confusion between local IP, public IP, and Tailscale IP selection
-- broken package mirrors that blocked Tailscale installation
-- possible Cloudflare WARP interference affecting routing and DNS behavior
-- SSH hanging because the client laptop also needed Tailscale active
-- accidentally SSH-ing into the same machine instead of testing laptop -> server access
-
-These issues forced a step-by-step troubleshooting process: validate service status, confirm addressing, verify both endpoints are on the same tailnet, then harden SSH only after stable access.
-
-See: `docs/troubleshooting.md` and `NOTES.md`
-
-## Skills Demonstrated
-
-- Linux package/service management (`pacman`, `systemctl`)
-- SSH installation, validation, and hardening
-- Private remote access design with Tailscale
-- Network troubleshooting and connectivity validation
-- Operational documentation and reproducible setup scripts
-
-## Future Improvements
-
-- Add CachyOS and Arch test matrix notes
-- Add UFW examples for local LAN hardening
-- Add optional fail2ban profile for SSH
-- Add shellcheck and CI validation for scripts
-- Add key rotation and access review checklist
-
-## Resume-Ready Bullet
-
-- Built and documented a Linux remote-access home lab using OpenSSH and Tailscale; implemented SSH hardening (no root, key-only auth), created reproducible setup scripts, and resolved real-world connectivity issues across local and private overlay networks.
+Automated checks live in `tests/run.sh` and `.github/workflows/ci.yml`.

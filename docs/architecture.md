@@ -1,40 +1,30 @@
 # Architecture
 
-## Scope
+## Scope and trust boundaries
 
-This lab is focused on secure remote Linux administration over a private network path. It intentionally does **not** cover app deployment, Kubernetes, or cloud hosting.
-
-## High-Level Flow
+This lab provides private remote administration only: a macOS client reaches traditional OpenSSH on a CachyOS/Arch server through Tailscale. It does not cover public port forwarding, Tailscale SSH, containers, orchestration, or cloud deployment.
 
 ```text
-[Laptop / SSH Client]
-         |
-         |  ssh user@100.x.y.z
-         v
-[Tailscale Private Network]
-         |
-         v
-[Linux Server / SSH Daemon]
+[macOS: ssh / VS Code]
+          |
+          | tailnet ACL + encrypted Tailscale path (direct or DERP-relayed)
+          v
+[CachyOS: tailscaled] -> [TCP port 22: OpenSSH sshd] -> [Linux user session]
 ```
 
-## Components
+Tailscale supplies addressing, routing, and tailnet authorization. OpenSSH independently supplies host identity, user public-key authentication, PTY/SFTP, and TCP/stream-local forwarding. VS Code Remote SSH uses OpenSSH and starts VS Code Server as the remote user.
 
-- **Laptop (client):** where SSH commands are run.
-- **Linux server:** target machine running OpenSSH (`sshd`).
-- **Tailscale (`tailscaled`):** provides private overlay networking between client and server.
-- **OpenSSH (`sshd`):** secure remote shell service.
+## Security baseline
 
-## Access Model
+After key login is proven from the real client, the managed global baseline is:
 
-- Primary access path: laptop -> Tailscale IP -> server SSH.
-- Authentication: SSH key-based login.
-- Hardening baseline:
-  - `PermitRootLogin no`
-  - `PasswordAuthentication no`
-  - `PubkeyAuthentication yes`
+```text
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+```
 
-## Why This Design
+Forwarding is deliberately left at the OpenSSH/default or administrator-selected value because VS Code Remote SSH needs a tunnel. Tailnet policy, host firewall policy, and SSH authentication remain separate controls.
 
-- Avoid exposing public SSH port for a beginner home lab.
-- Keep setup reproducible with small scripts.
-- Prioritize secure access and troubleshooting fundamentals over deployment complexity.
+OpenSSH uses the first obtained value for most settings and evaluates `Match` rules for a connection. Therefore the hardening script only uses the Arch-style early Include, checks an explicit connection context when Match blocks exist, and refuses to edit an incompatible layout.
